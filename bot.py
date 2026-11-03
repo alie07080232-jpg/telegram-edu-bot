@@ -1256,6 +1256,9 @@ async def handle_contrib_approval(update: Update, context: ContextTypes.DEFAULT_
 # =========================
 # 6. التشغيل الرئيسي
 # =========================
+# =========================
+# 6. التشغيل الرئيسي
+# =========================
 def main():
     request = HTTPXRequest(
         connect_timeout=60.0,
@@ -1264,16 +1267,8 @@ def main():
         pool_timeout=60.0
     )
     
-    # استخدام خادم وسيط (API Base URL Proxy) لكسر حظر شبكة Render والاتصال بتليجرام بسلاسة
-    PROXY_API_URL = "https://tele-proxy.my-net.workers.dev/bot{token}/{method}"
-    
-    app = (
-        Application.builder()
-        .token(TOKEN)
-        .request(request)
-        .base_url(PROXY_API_URL)
-        .build()
-    )
+    # بناء التطبيق بالطريقة القياسية المستقرة
+    app = Application.builder().token(TOKEN).request(request).build()
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("panel", panel_command))
@@ -1284,14 +1279,15 @@ def main():
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, input_handler))
 
     print("==========================================")
-    print("🚀 تم تشغيل البوت عبر خادم وسيط كاسر للحظر بنجاح!")
+    print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
 
+    # تشغيل آمن يحمي البوت من الانهيار عند حدوث Bad Gateway
     while True:
         try:
             app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
         except Exception as e:
-            print(f"⚠️ خطأ في الاتصال: {e}. إعادة المحاولة خلال 5 ثوانٍ...")
+            print(f"⚠️ خطأ في الشبكة: {e}. إعادة المحاولة خلال 5 ثوانٍ...")
             import time
             time.sleep(5)
 
