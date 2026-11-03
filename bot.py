@@ -1257,21 +1257,22 @@ async def handle_contrib_approval(update: Update, context: ContextTypes.DEFAULT_
 # 6. التشغيل الرئيسي
 # =========================
 def main():
-    # زيادة مهلة الاتصال وقراءتها لتجنب انقطاع الشبكة وخطأ Bad Gateway
+    # إعدادات الاتصال الآمنة والموسعة
     request = HTTPXRequest(
         connect_timeout=60.0,
         read_timeout=60.0,
         write_timeout=60.0,
         pool_timeout=60.0
     )
-    app = Application.builder().token(TOKEN).request(request).build()
+    
+    # بناء التطبيق مع حماية ضد توقفات الشبكة
+    app = Application.builder().token(TOKEN).request(request).concurrent_updates(True).build()
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("panel", panel_command))
     app.add_handler(CommandHandler("done", done_command))
     app.add_handler(CommandHandler("cancel", cancel_command))
     
-    app.add_handler(CallbackQueryHandler(handle_contrib_approval, pattern="^approve_contrib:"))
     app.add_handler(CallbackQueryHandler(callback_router))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, input_handler))
 
@@ -1279,5 +1280,5 @@ def main():
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
     
-    # التشغيل مع السماح بتجاوز أخطاء الشبكة المؤقتة
-    app.run_polling(drop_pending_updates=True)
+    # التشغيل مع تفريغ الطابور القديم لمنع التعليق
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
