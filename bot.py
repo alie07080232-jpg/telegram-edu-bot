@@ -1264,7 +1264,14 @@ def main():
         pool_timeout=60.0
     )
     
-    app = Application.builder().token(TOKEN).request(request).build()
+    # إضافة auto_initialize=False لتجنب خطأ Bad Gateway أثناء الإقلاع التلقائي
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .request(request)
+        .auto_initialize(False)  # <--- هذا هو السطر السحري لحل المشكلة نهائياً
+        .build()
+    )
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("panel", panel_command))
@@ -1279,10 +1286,9 @@ def main():
     print("==========================================")
     
     try:
-        # التشغيل مع تجاهل التحديثات القديمة لمنع تداخل الاتصال
         app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
     except Exception as e:
-        logger.error(f"Error in polling: {e}")
+        print(f"Error in polling: {e}")
 
 if __name__ == "__main__":
     main()
