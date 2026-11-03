@@ -1259,6 +1259,9 @@ async def handle_contrib_approval(update: Update, context: ContextTypes.DEFAULT_
 # =========================
 # 6. التشغيل الرئيسي
 # =========================
+# =========================
+# 6. التشغيل الرئيسي
+# =========================
 def main():
     request = HTTPXRequest(
         connect_timeout=60.0,
@@ -1267,7 +1270,6 @@ def main():
         pool_timeout=60.0
     )
     
-    # بناء التطبيق بالطريقة القياسية المستقرة
     app = Application.builder().token(TOKEN).request(request).build()
     
     app.add_handler(CommandHandler("start", start_command))
@@ -1282,14 +1284,20 @@ def main():
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
 
-    # تشغيل آمن يحمي البوت من الانهيار عند حدوث Bad Gateway
+    # حلقة تشغيل ذكية مع محاولة مستمرة بدون انهيار
     while True:
         try:
-            app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+            # استخدام run_polling داخل حلقة آمنة مع تعطيل التحديثات القديمة
+            app.run_polling(
+                drop_pending_updates=True, 
+                allowed_updates=Update.ALL_TYPES,
+                close_loop=False
+            )
         except Exception as e:
-            print(f"⚠️ خطأ في الشبكة: {e}. إعادة المحاولة خلال 5 ثوانٍ...")
+            print(f"⚠️ واجهنا انقطاع مؤقت في الشبكة (Bad Gateway): {e}")
+            print("🔄 إعادة محاولة الاتصال خلال 10 ثوانٍ...")
             import time
-            time.sleep(5)
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()
