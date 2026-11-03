@@ -52,7 +52,8 @@ default_structure = {
         "عبور": "⚖️ **شروط العبور (التحميل):** يحق للطالب العبور بمادتين كحد أقصى من المرحلة الحالية.",
         "قاعات": "📍 **القاعات والمختبرات:** يرجى مراجعة لوحة الإعلانات في قسمك لمعرفة جدول القاعات."
     },
-    "student_contributions": {}
+    "student_contributions": {},
+    "pending_contribs": {}
 }
 
 admin_states = {}
@@ -79,6 +80,7 @@ def load_data():
                     if "schedule_info" not in loaded: loaded["schedule_info"] = default_structure["schedule_info"]
                     if "faq_info" not in loaded: loaded["faq_info"] = default_structure["faq_info"]
                     if "student_contributions" not in loaded: loaded["student_contributions"] = {}
+                    if "pending_contribs" not in loaded: loaded["pending_contribs"] = {}
                     return loaded
         except Exception as e:
             logger.error(f"Error loading JSON: {e}")
@@ -483,6 +485,45 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             status_str = "🔒 (ممنوع التوجيه)" if protect_val else "🔓 (مسموح التوجيه)"
             await query.message.edit_text(f"✅ تم إرسال الإذاعة بنجاح إلى <b>{count}</b> طالب في المرحلة المحددة {status_str}.", parse_mode="HTML")
+        return
+
+    # معالجة الموافقة على ملخصات الطلبة
+    if data.startswith("approve_contrib:") or data.startswith("reject_contrib:"):
+        parts = data.split(":")
+        action, st_id, u_id_str = parts[0], parts[1], parts[2]
+        pending = db.get("pending_contribs", {}).get(u_id_str)
+        
+        if pending:
+            p_item = pending["item"]
+            if action == "approve_contrib":
+                if st_id not in db["student_contributions"]:
+                    db["student_contributions"][st_id] = []
+                db["student_contributions"][st_id].append(p_item)
+                save_data(db)
+                try:
+                    await context.bot.send_message(chat_id=int(u_id_str), text="🎉 <b>مبارك! تمت الموافقة على ملخصك ونشره في قسم شروحات وملخصات الطلبة.</b>", parse_mode="HTML")
+                except Exception:
+                    pass
+                await query.answer("✅ تمت الموافقة ونشر الملخص بنجاح!", show_alert=True)
+            else:
+                try:
+                    await context.bot.send_message(chat_id=int(u_id_str), text="❌ نعتذر، تم رفض الملخص المرسل من قبل الإدارة.", parse_mode="HTML")
+                except Exception:
+                    pass
+                await query.answer("❌ تم رفض الملخص.", show_alert=True)
+            
+            # حذف الطلب من المعلقات
+            if u_id_str in db["pending_contribs"]:
+                del db["pending_contribs"][u_id_str]
+                save_data(db)
+
+            try:
+                action_text = "✅ تم قبول ونشر الملخص" if action == "approve_contrib" else "❌ تم رفض الملخص"
+                await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(action_text, callback_data="close")]]))
+            except BadRequest:
+                pass
+        else:
+            await query.answer("⚠️ هذا الطلب غير موجود أو تم التعامل معه مسبقاً.", show_alert=True)
         return
 
     if data == "adm_pnl":
@@ -1229,36 +1270,6 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚙️ <b>هل تريد السماح بإعادة توجيه محتوى الإذاعة للمرحلة؟</b>", reply_markup=protect_kb, parse_mode="HTML")
             return
 
-async def handle_contrib_approval(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    data = query.data
-    if data.startswith("approve_contrib:"):
-        _, st_id, u_id_str = data.split(":")
-        pending = db.get("pending_contribs", {}).get(u_id_str)
-        if pending:
-            p_st_id = pending["st_id"]
-            p_item = pending["item"]
-            if p_st_id not in db["student_contributions"]:
-                db["student_contributions"][p_st_id] = []
-            db["student_contributions"][p_st_id].append(p_item)
-            save_data(db)
-            
-            try:
-                await context.bot.send_message(chat_id=int(u_id_str), text="🎉 <b>مبارك! تمت الموافقة على ملخصك ونشره في قسم شروحات وملخصات الطلبة.</b>", parse_mode="HTML")
-            except Exception:
-                pass
-        await query.answer("✅ تمت الموافقة ونشر الملخص في البوت بنجاح!", show_alert=True)
-        try:
-            await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ تم النشر رسمياً", callback_data="close")]]))
-        except BadRequest:
-            pass
-
-# =========================
-# 6. التشغيل الرئيسي
-# =========================
-# =========================
-# 6. التشغيل الرئيسي
-# =========================
 # =========================
 # 6. التشغيل الرئيسي
 # =========================
@@ -1284,10 +1295,8 @@ def main():
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
 
-    # حلقة تشغيل ذكية مع محاولة مستمرة بدون انهيار
     while True:
         try:
-            # استخدام run_polling داخل حلقة آمنة مع تعطيل التحديثات القديمة
             app.run_polling(
                 drop_pending_updates=True, 
                 allowed_updates=Update.ALL_TYPES,
