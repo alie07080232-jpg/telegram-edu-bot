@@ -1264,14 +1264,8 @@ def main():
         pool_timeout=60.0
     )
     
-    # إضافة auto_initialize=False لتجنب خطأ Bad Gateway أثناء الإقلاع التلقائي
-    app = (
-        Application.builder()
-        .token(TOKEN)
-        .request(request)
-        .auto_initialize(False)  # <--- هذا هو السطر السحري لحل المشكلة نهائياً
-        .build()
-    )
+    # البناء بالطريقة القياسية الصحيحة والمستقرة
+    app = Application.builder().token(TOKEN).request(request).build()
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("panel", panel_command))
@@ -1285,10 +1279,14 @@ def main():
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
     
-    try:
-        app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
-    except Exception as e:
-        print(f"Error in polling: {e}")
+    # حماية عملية التشغيل لمنع أي انهيار مفاجئ بسبب الشبكة
+    while True:
+        try:
+            app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+        except Exception as e:
+            print(f"Network error encountered: {e}. Retrying in 5 seconds...")
+            import time
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()
