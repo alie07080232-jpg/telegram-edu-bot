@@ -1257,7 +1257,6 @@ async def handle_contrib_approval(update: Update, context: ContextTypes.DEFAULT_
 # 6. التشغيل الرئيسي
 # =========================
 def main():
-    # إعدادات الاتصال الآمنة والموسعة
     request = HTTPXRequest(
         connect_timeout=60.0,
         read_timeout=60.0,
@@ -1265,8 +1264,7 @@ def main():
         pool_timeout=60.0
     )
     
-    # بناء التطبيق مع حماية ضد توقفات الشبكة
-    app = Application.builder().token(TOKEN).request(request).concurrent_updates(True).build()
+    app = Application.builder().token(TOKEN).request(request).build()
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("panel", panel_command))
@@ -1280,5 +1278,11 @@ def main():
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
     
-    # التشغيل مع تفريغ الطابور القديم لمنع التعليق
-    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+    try:
+        # التشغيل مع تجاهل التحديثات القديمة لمنع تداخل الاتصال
+        app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+    except Exception as e:
+        logger.error(f"Error in polling: {e}")
+
+if __name__ == "__main__":
+    main()
