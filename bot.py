@@ -46,11 +46,11 @@ default_structure = {
     "banned_users": [],
     "stages": {},
     "favorites": {},
-    "schedule_info": "📅 لا يوجد جدول مضاف حالياً.",
+    "schedule_info": {"type": "text", "value": "📅 لا يوجد جدول مضاف حالياً."},
     "faq_info": {
-        "سعي": "📊 **احتساب السعي:** يتم احتساب السعي بناءً على درجات امتحانات الفاينل والميد والنشاط اليومي.",
-        "عبور": "⚖️ **شروط العبور (التحميل):** يحق للطالب العبور بمادتين كحد أقصى من المرحلة الحالية.",
-        "قاعات": "📍 **القاعات والمختبرات:** يرجى مراجعة لوحة الإعلانات في قسمك لمعرفة جدول القاعات."
+        "سعي": {"type": "text", "value": "📊 **احتساب السعي:** يتم احتساب السعي بناءً على درجات امتحانات الفاينل والميد والنشاط اليومي."},
+        "عبور": {"type": "text", "value": "⚖️ **شروط العبور (التحميل):** يحق للطالب العبور بمادتين كحد أقصى من المرحلة الحالية."},
+        "قاعات": {"type": "text", "value": "📍 **القاعات والمختبرات:** يرجى مراجعة لوحة الإعلانات في قسمك لمعرفة جدول القاعات."}
     },
     "student_contributions": {},
     "pending_contribs": {}
@@ -81,6 +81,14 @@ def load_data():
                     if "faq_info" not in loaded: loaded["faq_info"] = default_structure["faq_info"]
                     if "student_contributions" not in loaded: loaded["student_contributions"] = {}
                     if "pending_contribs" not in loaded: loaded["pending_contribs"] = {}
+                    
+                    if isinstance(loaded["schedule_info"], str):
+                        loaded["schedule_info"] = {"type": "text", "value": loaded["schedule_info"]}
+                    
+                    for k, v in list(loaded["faq_info"].items()):
+                        if isinstance(v, str):
+                            loaded["faq_info"][k] = {"type": "text", "value": v}
+
                     return loaded
         except Exception as e:
             logger.error(f"Error loading JSON: {e}")
@@ -163,10 +171,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(ask_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
             return
 
+    # ترتيب القائمة الرئيسية بشكل مرتب ومريح
     keyboard = [
-        [InlineKeyboardButton("📚 المراحل والمناهج", callback_data="u_st_main")],
-        [InlineKeyboardButton("💡 ملخصات وشروحات الطلبة", callback_data="student_contrib_main")],
-        [InlineKeyboardButton("📅 جدول الامتحانات والدروس", callback_data="show_schedule"), InlineKeyboardButton("🤖 الأسئلة الشائعة", callback_data="show_faq")],
+        [InlineKeyboardButton("📚 المراحل والمناهج", callback_data="u_st_main"), InlineKeyboardButton("💡 ملخصات الطلبة", callback_data="student_contrib_main")],
+        [InlineKeyboardButton("📅 جدول الامتحانات", callback_data="show_schedule"), InlineKeyboardButton("🤖 الأسئلة الشائعة", callback_data="show_faq")],
         [InlineKeyboardButton("🔍 بحث سريع", callback_data="start_search"), InlineKeyboardButton("⭐ مفضلتي", callback_data="show_favs")],
         [InlineKeyboardButton("🔄 تغيير المرحلة الأساسية", callback_data="change_my_stage")],
         [InlineKeyboardButton("🎥 قناة اليوتيوب", url=YOUTUBE_URL), InlineKeyboardButton("💬 تواصل مع الإدارة", callback_data="start_support")],
@@ -193,14 +201,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def get_admin_panel_keyboard(user_id):
     if is_full_admin(user_id):
+        # لوحة تحكم منظمة ومرتبة بشكل ممتاز
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("➕ إضافة مرحلة", callback_data="add_st"), InlineKeyboardButton("➕ إضافة مادة", callback_data="add_sb")],
-            [InlineKeyboardButton("📥 رفع محتوى", callback_data="up_st"), InlineKeyboardButton("🗑 حذف مرحلة/مادة", callback_data="del_menu")],
-            [InlineKeyboardButton("📢 إذاعة للكل", callback_data="broadcast_all"), InlineKeyboardButton("🎯 إذاعة مخصصة (لمرحلة)", callback_data="broadcast_target")],
-            [InlineKeyboardButton("📅 تحديث الجدول", callback_data="set_schedule"), InlineKeyboardButton("👥 رابط مناقشة لمادة", callback_data="set_group_link")],
-            [InlineKeyboardButton("👑 إضافة مشرف جزئي", callback_data="add_subadmin")],
-            [InlineKeyboardButton("📊 الإحصائيات", callback_data="stats"), InlineKeyboardButton("💾 Backup", callback_data="backup_db")],
-            [InlineKeyboardButton("🚫 حظر", callback_data="ban_usr"), InlineKeyboardButton("✅ فك الحظر", callback_data="unban_usr")],
+            [InlineKeyboardButton("📥 رفع محتوى للمواد", callback_data="up_st"), InlineKeyboardButton("🗑 حذف مراحل/مواد", callback_data="del_menu")],
+            [InlineKeyboardButton("📅 إدارة الجدول", callback_data="set_schedule"), InlineKeyboardButton("🤖 إدارة الأسئلة الشائعة", callback_data="manage_faq")],
+            [InlineKeyboardButton("📢 إذاعة للكل", callback_data="broadcast_all"), InlineKeyboardButton("🎯 إذاعة لمرحلة", callback_data="broadcast_target")],
+            [InlineKeyboardButton("👥 رابط مناقشة لمادة", callback_data="set_group_link"), InlineKeyboardButton("👑 إضافة مشرف", callback_data="add_subadmin")],
+            [InlineKeyboardButton("📊 الإحصائيات", callback_data="stats"), InlineKeyboardButton("💾 نسخة احتياطية", callback_data="backup_db")],
+            [InlineKeyboardButton("🚫 حظر مستخدم", callback_data="ban_usr"), InlineKeyboardButton("✅ فك الحظر", callback_data="unban_usr")],
             [InlineKeyboardButton("🗑 إغلاق اللوحة", callback_data="close")]
         ])
     elif is_sub_admin(user_id):
@@ -317,84 +326,24 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
 
-    if data == "student_contrib_main":
-        stages = db.get("stages", {})
-        keyboard = [
-            [InlineKeyboardButton("📤 رفع ملخص أو شرح جديد", callback_data="student_upload_start")]
-        ]
-        for k, v in stages.items():
-            keyboard.append([InlineKeyboardButton(f"💡 ملخصات {v['name']}", callback_data=f"view_contrib_st:{k}")])
-        keyboard.append([InlineKeyboardButton("⬅️ الرجوع للرئيسية", callback_data="go_home")])
-        keyboard.append([InlineKeyboardButton("🗑 مسح", callback_data="close")])
-        try:
-            await query.edit_message_text("💡 <b>قسم شروحات وملخصات الطلبة المتميزين:</b>\nاختر المرحلة لعرض الملخصات أو اضغط لرفع ملخصك الخاص:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data == "student_upload_start":
-        stages = db.get("stages", {})
-        if not stages:
-            await query.answer("❌ لا توجد مراحل متاحة حالياً.", show_alert=True)
-            return
-        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"contrib_sel_st:{k}")] for k, v in stages.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="student_contrib_main")])
-        try:
-            await query.edit_message_text("📤 <b>اختر المرحلة الدراسية الخاصة بالملخص أو الشرح الذي تريد رفعه:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("contrib_sel_st:"):
-        st_id = data.split(":")[1]
-        admin_states[user_id] = {"mode": "student_contrib_upload", "st_id": st_id}
-        cancel_kb = [[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]
-        try:
-            await query.message.reply_text("✍️ <b>أرسل الآن الملخص (ملف PDF، أو صورة، أو شرح نصي) مع ذكر اسمك ورتّب التفاصيل:</b>", reply_markup=InlineKeyboardMarkup(cancel_kb), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("view_contrib_st:"):
-        st_id = data.split(":")[1]
-        contributions = db.get("student_contributions", {}).get(st_id, [])
-        back_kb = [
-            [InlineKeyboardButton("⬅️ رجوع لقائمة الملخصات", callback_data="student_contrib_main")],
-            [InlineKeyboardButton("🗑 مسح", callback_data="close")]
-        ]
-        if not contributions:
-            try:
-                await query.edit_message_text("❌ لا توجد ملخصات معتمدة لهذه المرحلة حالياً.", reply_markup=InlineKeyboardMarkup(back_kb))
-            except BadRequest:
-                pass
-            return
-
-        for item in contributions:
-            itype, val, u_name, caption = item.get("type"), item.get("value"), item.get("uploader_name"), item.get("caption", "")
-            full_cap = f"💡 <b>ملخص طالب متميز:</b> {html.escape(u_name)}\n📝 {html.escape(caption)}"
-            try:
-                if itype == "pdf":
-                    await query.message.reply_document(document=val, caption=full_cap, parse_mode="HTML")
-                elif itype == "image":
-                    await query.message.reply_photo(photo=val, caption=full_cap, parse_mode="HTML")
-                elif itype == "text":
-                    await query.message.reply_text(f"{full_cap}\n\n{html.escape(val)}", parse_mode="HTML")
-            except Exception as e:
-                logger.error(f"Error sending contribution: {e}")
-
-        try:
-            await query.message.reply_text("✨ <b>تم عرض جميع ملخصات هذه المرحلة.</b>", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
     if data == "show_schedule":
-        sched = db.get("schedule_info", "📅 لا يوجد جدول مضاف حالياً.")
+        sched_data = db.get("schedule_info", {"type": "text", "value": "📅 لا يوجد جدول مضاف حالياً."})
         back_kb = [[InlineKeyboardButton("⬅️ الرجوع للرئيسية", callback_data="go_home")], [InlineKeyboardButton("🗑 مسح", callback_data="close")]]
+        
+        stype = sched_data.get("type", "text")
+        val = sched_data.get("value", "")
+        caption = sched_data.get("caption", "📅 <b>جدول الامتحانات والدروس:</b>")
+
         try:
-            await query.edit_message_text(f"📅 <b>جدول الامتحانات والدروس:</b>\n\n{sched}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
-        except BadRequest:
-            pass
+            if stype == "photo":
+                await query.message.reply_photo(photo=val, caption=caption, reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+            elif stype == "pdf":
+                await query.message.reply_document(document=val, caption=caption, reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+            else:
+                await query.edit_message_text(f"📅 <b>جدول الامتحانات والدروس:</b>\n\n{val}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Error showing schedule: {e}")
+            await query.message.reply_text(f"📅 <b>جدول الامتحانات والدروس:</b>\n\n{val}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
         return
 
     if data == "show_faq":
@@ -412,118 +361,186 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("get_faq:"):
         faq_key = data.split(":")[1]
-        answer = db.get("faq_info", {}).get(faq_key, "لا توجد إجابة متاحة.")
+        faq_data = db.get("faq_info", {}).get(faq_key)
         back_kb = [[InlineKeyboardButton("⬅️ الرجوع للأسئلة الشائعة", callback_data="show_faq")]]
+        
+        if not faq_data:
+            await query.answer("❌ السؤال غير موجود.", show_alert=True)
+            return
+
+        ftype = faq_data.get("type", "text")
+        val = faq_data.get("value", "")
+        caption = faq_data.get("caption", f"💡 <b>سؤال: {faq_key}</b>")
+
         try:
-            await query.edit_message_text(f"💡 <b>{faq_key}:</b>\n\n{answer}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+            if ftype == "photo":
+                await query.message.reply_photo(photo=val, caption=f"💡 <b>{faq_key}</b>\n\n{caption}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+            elif ftype == "pdf":
+                await query.message.reply_document(document=val, caption=f"💡 <b>{faq_key}</b>\n\n{caption}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+            else:
+                await query.edit_message_text(f"💡 <b>{faq_key}:</b>\n\n{val}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Error fetching FAQ: {e}")
+        return
+
+    if not is_any_admin(user_id):
+        return
+
+    cancel_btn = [InlineKeyboardButton("❌ إلغاء / مسح", callback_data="cancel_state")]
+    back_to_panel = [InlineKeyboardButton("⬅️ رجوع للوحة", callback_data="adm_pnl")]
+
+    if data == "set_schedule":
+        keyboard = [
+            [InlineKeyboardButton("✍️ تعديل/رفع جدول جديد", callback_data="upload_sched_now")],
+            [InlineKeyboardButton("🗑 حذف الجدول الحالي", callback_data="delete_sched_now")],
+            back_to_panel
+        ]
+        try:
+            await query.edit_message_text("📅 <b>إدارة جدول الامتحانات والدروس:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
         except BadRequest:
             pass
         return
 
-    if data.startswith("set_protect:"):
-        protect_val = data.split(":")[1] == "true"
-        state = admin_states.get(user_id)
-        
-        if state and state.get("mode") == "ask_protect" and "temp_item" in state:
-            st_id, sb_id, sec_type = state["st_id"], state["sb_id"], state["sec_type"]
-            item_data = state["temp_item"]
-            item_data["protect_content"] = protect_val
-
-            stage = db.get("stages", {}).get(st_id)
-            if stage and sb_id in stage.get("subjects", {}):
-                subject = stage["subjects"][sb_id]
-                if "sections" not in subject:
-                    subject["sections"] = {"pdf": [], "questions": [], "youtube": []}
-                if sec_type not in subject["sections"]:
-                    subject["sections"][sec_type] = []
-
-                subject["sections"][sec_type].append(item_data)
-                state["count"] += 1
-                state["mode"] = "uploading"
-                del state["temp_item"]
-                save_data(db)
-
-                status_txt = "🔒 ممنوع التوجيه" if protect_val else "🔓 مسموح التوجيه"
-                cancel_done = [[InlineKeyboardButton("✅ إنهاء الرفع (/done)", callback_data="cancel_state")]]
-                await query.message.reply_text(
-                    f"✅ تم حفظ الملف بنجاح! ({status_txt})\n📊 إجمالي الملفات المرفوعة: <b>{state['count']}</b>\n\nأرسل الملف التالي أو اضغط إنهاء عند الاكتمال.",
-                    reply_markup=InlineKeyboardMarkup(cancel_done),
-                    parse_mode="HTML"
-                )
+    if data == "upload_sched_now":
+        admin_states[user_id] = {"mode": "setting_schedule"}
+        await query.message.reply_text("✍️ <b>أرسل الآن جدول الامتحانات (نص، صورة، أو ملف PDF):</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
         return
 
-    if data.startswith("broadcast_protect:"):
-        protect_val = data.split(":")[1] == "true"
-        state = admin_states.get(user_id)
-        if state and state.get("mode") == "broadcasting_st_protect":
-            st_id = state.get("st_id")
-            msg_data = state.get("msg_data")
-            
-            del admin_states[user_id]
-            
-            count = 0
-            for u in db.get("users", []):
-                str_u = str(u)
-                if str_u in db.get("user_stages", {}) and st_id in db["user_stages"][str_u]:
-                    try:
-                        m_type = msg_data.get("type")
-                        val = msg_data.get("value")
-                        cap = msg_data.get("caption", "")
-                        formatted_cap = f"📢 <b>إشعار لمرحلتك:</b>\n{cap}" if cap else "📢 <b>إشعار لمرحلتك:</b>"
-
-                        if m_type == "text":
-                            await context.bot.send_message(chat_id=u, text=f"📢 <b>إشعار لمرحلتك:</b>\n\n{val}", parse_mode="HTML", protect_content=protect_val)
-                        elif m_type == "document":
-                            await context.bot.send_document(chat_id=u, document=val, caption=formatted_cap, parse_mode="HTML", protect_content=protect_val)
-                        elif m_type == "photo":
-                            await context.bot.send_photo(chat_id=u, photo=val, caption=formatted_cap, parse_mode="HTML", protect_content=protect_val)
-                        elif m_type == "video":
-                            await context.bot.send_video(chat_id=u, video=val, caption=formatted_cap, parse_mode="HTML", protect_content=protect_val)
-                        count += 1
-                    except Exception as e:
-                        logger.error(f"Failed broadcasting to {u}: {e}")
-            
-            status_str = "🔒 (ممنوع التوجيه)" if protect_val else "🔓 (مسموح التوجيه)"
-            await query.message.edit_text(f"✅ تم إرسال الإذاعة بنجاح إلى <b>{count}</b> طالب في المرحلة المحددة {status_str}.", parse_mode="HTML")
+    if data == "delete_sched_now":
+        db["schedule_info"] = {"type": "text", "value": "📅 لا يوجد جدول مضاف حالياً."}
+        save_data(db)
+        await query.answer("✅ تم حذف الجدول الحالي بنجاح!", show_alert=True)
+        await panel_command(update, context)
         return
 
-    # معالجة الموافقة على ملخصات الطلبة
-    if data.startswith("approve_contrib:") or data.startswith("reject_contrib:"):
-        parts = data.split(":")
-        action, st_id, u_id_str = parts[0], parts[1], parts[2]
-        pending = db.get("pending_contribs", {}).get(u_id_str)
-        
-        if pending:
-            p_item = pending["item"]
-            if action == "approve_contrib":
-                if st_id not in db["student_contributions"]:
-                    db["student_contributions"][st_id] = []
-                db["student_contributions"][st_id].append(p_item)
-                save_data(db)
-                try:
-                    await context.bot.send_message(chat_id=int(u_id_str), text="🎉 <b>مبارك! تمت الموافقة على ملخصك ونشره في قسم شروحات وملخصات الطلبة.</b>", parse_mode="HTML")
-                except Exception:
-                    pass
-                await query.answer("✅ تمت الموافقة ونشر الملخص بنجاح!", show_alert=True)
-            else:
-                try:
-                    await context.bot.send_message(chat_id=int(u_id_str), text="❌ نعتذر، تم رفض الملخص المرسل من قبل الإدارة.", parse_mode="HTML")
-                except Exception:
-                    pass
-                await query.answer("❌ تم رفض الملخص.", show_alert=True)
-            
-            # حذف الطلب من المعلقات
-            if u_id_str in db["pending_contribs"]:
-                del db["pending_contribs"][u_id_str]
-                save_data(db)
+    if data == "manage_faq":
+        keyboard = [
+            [InlineKeyboardButton("➕ إضافة سؤال شائع جديد", callback_data="add_faq_title")],
+            [InlineKeyboardButton("🗑 حذف سؤال شائع", callback_data="del_faq_list")],
+            back_to_panel
+        ]
+        try:
+            await query.edit_message_text("⚙️ <b>لوحة إعدادات وتحديث الأسئلة الشائعة:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
 
-            try:
-                action_text = "✅ تم قبول ونشر الملخص" if action == "approve_contrib" else "❌ تم رفض الملخص"
-                await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(action_text, callback_data="close")]]))
-            except BadRequest:
-                pass
-        else:
-            await query.answer("⚠️ هذا الطلب غير موجود أو تم التعامل معه مسبقاً.", show_alert=True)
+    if data == "add_faq_title":
+        admin_states[user_id] = {"mode": "add_faq_title"}
+        await query.message.reply_text("✍️ <b>اكتب اسم/عنوان السؤال الشائع الجديد:</b>\nمثال: <code>سعي المادة</code> أو <code>موعد الفاينل</code>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
+        return
+
+    if data == "del_faq_list":
+        faqs = db.get("faq_info", {})
+        if not faqs:
+            await query.answer("❌ لا توجد أسئلة شائعة حالياً للحذف.", show_alert=True)
+            return
+        keyboard = [[InlineKeyboardButton(f"🗑 {k}", callback_data=f"do_del_faq:{k}")] for k, v in faqs.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="manage_faq")])
+        try:
+            await query.edit_message_text("⚠️ <b>اختر السؤال المراد حذفه نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("do_del_faq:"):
+        faq_key = data.split(":")[1]
+        if faq_key in db.get("faq_info", {}):
+            del db["faq_info"][faq_key]
+            save_data(db)
+            await query.answer(f"✅ تم حذف السؤال ({faq_key}) بنجاح.", show_alert=True)
+        
+        faqs = db.get("faq_info", {})
+        keyboard = [[InlineKeyboardButton(f"🗑 {k}", callback_data=f"do_del_faq:{k}")] for k, v in faqs.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="manage_faq")])
+        try:
+            await query.edit_message_text("⚠️ <b>اختر السؤال المراد حذفه نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data == "del_menu":
+        keyboard = [
+            [InlineKeyboardButton("🗑 حذف مرحلة بالكامل", callback_data="del_st_list")],
+            [InlineKeyboardButton("🗑 حذف مادة فقط", callback_data="del_sb_st_list")],
+            back_to_panel
+        ]
+        try:
+            await query.edit_message_text("⚠️ <b>اختر ماذا تريد أن تحذف:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data == "del_st_list":
+        stages = db.get("stages", {})
+        if not stages:
+            await query.answer("❌ لا توجد مراحل للحذف.", show_alert=True)
+            return
+        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_st:{k}")] for k, v in stages.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_menu")])
+        try:
+            await query.edit_message_text("⚠️ <b>اختر المرحلة التي تريد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("do_del_st:"):
+        st_id = data.split(":")[1]
+        if st_id in db["stages"]:
+            del db["stages"][st_id]
+            save_data(db)
+            await query.answer("✅ تم حذف المرحلة بالكامل.", show_alert=True)
+        
+        stages = db.get("stages", {})
+        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_st:{k}")] for k, v in stages.items()] if stages else []
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_menu")])
+        try:
+            await query.edit_message_text("⚠️ <b>اختر المرحلة التي تريد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data == "del_sb_st_list":
+        stages = db.get("stages", {})
+        if not stages:
+            await query.answer("❌ لا توجد مراحل.", show_alert=True)
+            return
+        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"del_sb_list:{k}")] for k, v in stages.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_menu")])
+        try:
+            await query.edit_message_text("اختر المرحلة التي بداخلها المادة المراد حذفها:", reply_markup=InlineKeyboardMarkup(keyboard))
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("del_sb_list:"):
+        st_id = data.split(":")[1]
+        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
+        if not subjects:
+            await query.answer("❌ لا توجد مواد في هذه المرحلة.", show_alert=True)
+            return
+        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_sb:{st_id}:{k}")] for k, v in subjects.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_sb_st_list")])
+        try:
+            await query.edit_message_text("⚠️ <b>اختر المادة المراد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("do_del_sb:"):
+        _, st_id, sb_id = data.split(":")
+        if st_id in db["stages"] and sb_id in db["stages"][st_id]["subjects"]:
+            del db["stages"][st_id]["subjects"][sb_id]
+            save_data(db)
+            await query.answer("✅ تم حذف المادة بنجاح.", show_alert=True)
+            
+        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
+        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_sb:{st_id}:{k}")] for k, v in subjects.items()] if subjects else []
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_sb_st_list")])
+        try:
+            await query.edit_message_text("⚠️ <b>اختر المادة المراد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
         return
 
     if data == "adm_pnl":
@@ -608,72 +625,125 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("✨ <b>تم عرض كافة الملفات.</b>", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
         return
 
-    if data.startswith("toggle_fav:"):
-        _, st_id, sb_id = data.split(":")
-        str_user_id = str(user_id)
-        if str_user_id not in db["favorites"]:
-            db["favorites"][str_user_id] = []
-
-        user_favs = db["favorites"][str_user_id]
-        existing = next((f for f in user_favs if f.get("st_id") == st_id and f.get("sb_id") == sb_id), None)
-
-        if existing:
-            user_favs.remove(existing)
-            await query.answer("🗑 تم مسح المادة من المفضلة", show_alert=True)
-        else:
-            sb_name = db.get("stages", {}).get(st_id, {}).get("subjects", {}).get(sb_id, {}).get("name", "مادة")
-            user_favs.append({"st_id": st_id, "sb_id": sb_id, "name": sb_name})
-            await query.answer("⭐ تم إضافة المادة لمفضلتك", show_alert=True)
-
-        save_data(db)
-        await render_subject_menu(query, st_id, sb_id, user_id)
+    if not is_full_admin(user_id):
         return
 
-    if data == "show_favs":
-        str_user_id = str(user_id)
-        user_favs = db.get("favorites", {}).get(str_user_id, [])
+    if data == "stats":
+        total_users = len(db.get("users", []))
+        total_banned = len(db.get("banned_users", []))
+        total_stages = len(db.get("stages", {}))
+        total_subjects = sum(len(st.get("subjects", {})) for st in db.get("stages", {}).values())
 
-        back_kb = [
-            [InlineKeyboardButton("⬅️ الرجوع للرئيسية", callback_data="go_home")],
-            [InlineKeyboardButton("🗑 مسح الرسالة", callback_data="close")]
-        ]
-
-        if not user_favs:
-            try:
-                await query.edit_message_text("⭐ قائمة مفضلتك فارغة حالياً.", reply_markup=InlineKeyboardMarkup(back_kb))
-            except BadRequest:
-                pass
-            return
-
-        keyboard = [[InlineKeyboardButton(f"📖 {f['name']}", callback_data=f"u_sb:{f['st_id']}:{f['sb_id']}")] for f in user_favs]
-        keyboard.extend(back_kb)
+        stats_msg = (
+            "📊 <b>الإحصائيات المتقدمة:</b>\n\n"
+            f"👤 <b>المستخدمين الكلي:</b> <code>{total_users}</code>\n"
+            f"🚫 <b>المحظورين:</b> <code>{total_banned}</code>\n"
+            f"📚 <b>المراحل:</b> <code>{total_stages}</code>\n"
+            f"📖 <b>المواد:</b> <code>{total_subjects}</code>"
+        )
+        keyboard = [back_to_panel, [InlineKeyboardButton("🗑 مسح", callback_data="close")]]
         try:
-            await query.edit_message_text("⭐ <b>المواد المحفوظة في المفضلة:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+            await query.edit_message_text(stats_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
         except BadRequest:
             pass
         return
 
-    if data == "start_search":
-        admin_states[user_id] = {"mode": "searching"}
-        cancel_kb = [[InlineKeyboardButton("❌ إلغاء / مسح", callback_data="cancel_state")]]
-        await query.message.reply_text("🔍 <b>أرسل اسم المادة أو المرحلة التي تبحث عنها:</b>", reply_markup=InlineKeyboardMarkup(cancel_kb), parse_mode="HTML")
+    if data == "backup_db":
+        try:
+            await query.message.reply_document(document=DATA_FILE, filename="backup_data.json", caption="💾 <b>نسخة احتياطية لقاعدة البيانات.</b>", parse_mode="HTML")
+        except Exception as e:
+            await query.message.reply_text(f"❌ خطأ عند إرسال النسخة الاحتياطية: {e}")
         return
 
-    if data == "start_support":
-        admin_states[user_id] = {"mode": "user_support"}
-        cancel_kb = [[InlineKeyboardButton("❌ إلغاء / مسح", callback_data="cancel_state")]]
-        await query.message.reply_text("💬 <b>اكتب رسالتك أو استفسارك وسوف يصل مباشرة لإدارة البوت:</b>", reply_markup=InlineKeyboardMarkup(cancel_kb), parse_mode="HTML")
+    if data == "add_st":
+        admin_states[user_id] = {"mode": "add_st"}
+        await query.message.reply_text("✍️ <b>أرسل الآن اسم المرحلة الجديدة:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
         return
 
-    if not is_any_admin(user_id):
+    if data == "add_sb":
+        stages = db.get("stages", {})
+        if not stages:
+            try:
+                await query.edit_message_text("❌ أضف مرحلة واحدة على الأقل أولاً!", reply_markup=InlineKeyboardMarkup([back_to_panel]))
+            except BadRequest:
+                pass
+            return
+        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"sel_st_sb:{k}")] for k, v in stages.items()]
+        keyboard.append(back_to_panel)
+        try:
+            await query.edit_message_text("اختر المرحلة التي تريد إضافة المادة إليها:", reply_markup=InlineKeyboardMarkup(keyboard))
+        except BadRequest:
+            pass
         return
 
-    cancel_btn = [InlineKeyboardButton("❌ إلغاء / مسح", callback_data="cancel_state")]
-    back_to_panel = [InlineKeyboardButton("⬅️ رجوع للوحة", callback_data="adm_pnl")]
+    if data.startswith("sel_st_sb:"):
+        st_id = data.split(":")[1]
+        admin_states[user_id] = {"mode": "add_sb", "st_id": st_id}
+        await query.message.reply_text("✍️ <b>أرسل الآن اسم المادة الجديدة:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
+        return
 
-    if data == "set_schedule":
-        admin_states[user_id] = {"mode": "setting_schedule"}
-        await query.message.reply_text("✍️ <b>أرسل نص جدول الامتحانات أو الدروس الجديد ليتم حفظه:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
+    if data == "broadcast_all":
+        admin_states[user_id] = {"mode": "broadcasting_all"}
+        await query.message.reply_text("✍️ <b>أرسل رسالة الإذاعة (ستصل لجميع المشتركين):</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
+        return
+
+    if data == "broadcast_target":
+        stages = db.get("stages", {})
+        keyboard = [[InlineKeyboardButton(f"🎯 إذاعة لـ {v['name']}", callback_data=f"do_broad_st:{k}")] for k, v in stages.items()]
+        keyboard.append(back_to_panel)
+        try:
+            await query.edit_message_text("اختر المرحلة التي تريد إرسال الإشعار لطلابها فقط:", reply_markup=InlineKeyboardMarkup(keyboard))
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("do_broad_st:"):
+        st_id = data.split(":")[1]
+        st_name = html.escape(db["stages"][st_id]["name"])
+        admin_states[user_id] = {"mode": "broadcasting_st", "st_id": st_id}
+        await query.message.reply_text(f"✍️ <b>أرسل رسالة أو ملف الإذاعة (نص، صورة، ملف، شرح) لطلاب مرحلة {st_name}:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
+        return
+        
+    if data == "set_group_link":
+        stages = db.get("stages", {})
+        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"grp_st:{k}")] for k, v in stages.items()]
+        keyboard.append(back_to_panel)
+        try:
+            await query.edit_message_text("اختر المرحلة لإضافة رابط جروب لمادتها:", reply_markup=InlineKeyboardMarkup(keyboard))
+        except BadRequest:
+            pass
+        return
+
+    if data == "ban_usr":
+        admin_states[user_id] = {"mode": "ban_user_id"}
+        await query.message.reply_text("✍️ <b>أرسل الآيدي (ID) الخاص بالمستخدم المراد حظره:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
+        return
+
+    if data == "unban_usr":
+        admin_states[user_id] = {"mode": "unban_user_id"}
+        await query.message.reply_text("✍️ <b>أرسل الآيدي (ID) الخاص بالمستخدم المراد فك حظره:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
+        return
+        
+    if data.startswith("grp_st:"):
+        st_id = data.split(":")[1]
+        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
+        keyboard = [[InlineKeyboardButton(f"📖 {v['name']}", callback_data=f"grp_sb:{st_id}:{k}")] for k, v in subjects.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="set_group_link")])
+        try:
+            await query.edit_message_text("اختر المادة:", reply_markup=InlineKeyboardMarkup(keyboard))
+        except BadRequest:
+            pass
+        return
+        
+    if data.startswith("grp_sb:"):
+        _, st_id, sb_id = data.split(":")
+        admin_states[user_id] = {"mode": "setting_grp_link", "st_id": st_id, "sb_id": sb_id}
+        await query.message.reply_text("✍️ <b>أرسل رابط جروب التليجرام الخاص بهذه المادة:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
+        return
+
+    if data == "add_subadmin":
+        admin_states[user_id] = {"mode": "add_subadmin_id"}
+        await query.message.reply_text("✍️ <b>أرسل الآيدي (ID) الخاص بالمشرف الجديد:</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
         return
 
     if data == "up_st":
@@ -697,7 +767,7 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
             
         keyboard.append(back_to_panel)
-        keyboard.append([InlineKeyboardButton("🗑 مسح / إغلاق", callback_data="close")])
+        keyboard.append([InlineKeyboardButton("🗑 إغلاق", callback_data="close")])
         try:
             await query.edit_message_text("اختر المرحلة للرفع فيها:", reply_markup=InlineKeyboardMarkup(keyboard))
         except BadRequest:
@@ -752,232 +822,7 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "tag": ""
         }
         await query.message.reply_text("✍️ <b>أرسل تصنيف الملفات (السنة والدور) لتنظيمها.</b>\nمثال: <code>2024 - الدور الأول</code>\n(أو أرسل كلمة <code>تخطي</code>):", 
-            reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if not is_full_admin(user_id):
-        return
-
-    if data == "stats":
-        total_users = len(db.get("users", []))
-        total_banned = len(db.get("banned_users", []))
-        total_stages = len(db.get("stages", {}))
-        total_subjects = sum(len(st.get("subjects", {})) for st in db.get("stages", {}).values())
-
-        stats_msg = (
-            "📊 <b>الإحصائيات المتقدمة:</b>\n\n"
-            f"👤 <b>المستخدمين الكلي:</b> <code>{total_users}</code>\n"
-            f"🚫 <b>المحظورين:</b> <code>{total_banned}</code>\n"
-            f"📚 <b>المراحل:</b> <code>{total_stages}</code>\n"
-            f"📖 <b>المواد:</b> <code>{total_subjects}</code>"
-        )
-        keyboard = [back_to_panel, [InlineKeyboardButton("🗑 مسح", callback_data="close")]]
-        try:
-            await query.edit_message_text(stats_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data == "backup_db":
-        try:
-            await query.message.reply_document(document=DATA_FILE, filename="backup_data.json", caption="💾 <b>نسخة احتياطية لقاعدة البيانات.</b>", parse_mode="HTML")
-        except Exception as e:
-            await query.message.reply_text(f"❌ خطأ عند إرسال النسخة الاحتياطية: {e}")
-        return
-
-    if data == "add_st":
-        admin_states[user_id] = {"mode": "add_st"}
-        await query.message.reply_text("✍️ <b>أرسل الآن اسم المرحلة الجديدة:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if data == "add_sb":
-        stages = db.get("stages", {})
-        if not stages:
-            try:
-                await query.edit_message_text("❌ أضف مرحلة واحدة على الأقل أولاً!", reply_markup=InlineKeyboardMarkup([back_to_panel]))
-            except BadRequest:
-                pass
-            return
-        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"sel_st_sb:{k}")] for k, v in stages.items()]
-        keyboard.append(back_to_panel)
-        try:
-            await query.edit_message_text("اختر المرحلة التي تريد إضافة المادة إليها:", reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("sel_st_sb:"):
-        st_id = data.split(":")[1]
-        admin_states[user_id] = {"mode": "add_sb", "st_id": st_id}
-        await query.message.reply_text("✍️ <b>أرسل الآن اسم المادة الجديدة:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if data == "del_menu":
-        keyboard = [
-            [InlineKeyboardButton("🗑 حذف مرحلة بالكامل", callback_data="del_st_list")],
-            [InlineKeyboardButton("🗑 حذف مادة فقط", callback_data="del_sb_st_list")],
-            back_to_panel
-        ]
-        try:
-            await query.edit_message_text("⚠️ <b>اختر ماذا تريد أن تحذف:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data == "del_st_list":
-        stages = db.get("stages", {})
-        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_st:{k}")] for k, v in stages.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_menu")])
-        try:
-            await query.edit_message_text("⚠️ <b>اختر المرحلة التي تريد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("do_del_st:"):
-        st_id = data.split(":")[1]
-        if st_id in db["stages"]:
-            del db["stages"][st_id]
-            save_data(db)
-            await query.answer("✅ تم حذف المرحلة بالكامل.", show_alert=True)
-        
-        stages = db.get("stages", {})
-        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_st:{k}")] for k, v in stages.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_menu")])
-        try:
-            await query.edit_message_text("⚠️ <b>اختر المرحلة التي تريد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data == "del_sb_st_list":
-        stages = db.get("stages", {})
-        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"del_sb_list:{k}")] for k, v in stages.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_menu")])
-        try:
-            await query.edit_message_text("اختر المرحلة التي بداخلها المادة المراد حذفها:", reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("del_sb_list:"):
-        st_id = data.split(":")[1]
-        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
-        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_sb:{st_id}:{k}")] for k, v in subjects.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_sb_st_list")])
-        try:
-            await query.edit_message_text("⚠️ <b>اختر المادة المراد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("do_del_sb:"):
-        _, st_id, sb_id = data.split(":")
-        if st_id in db["stages"] and sb_id in db["stages"][st_id]["subjects"]:
-            del db["stages"][st_id]["subjects"][sb_id]
-            save_data(db)
-            await query.answer("✅ تم حذف المادة بنجاح.", show_alert=True)
-            
-        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
-        keyboard = [[InlineKeyboardButton(f"🗑 {v['name']}", callback_data=f"do_del_sb:{st_id}:{k}")] for k, v in subjects.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="del_sb_st_list")])
-        try:
-            await query.edit_message_text("⚠️ <b>اختر المادة المراد حذفها نهائياً:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-        except BadRequest:
-            pass
-        return
-
-    if data == "broadcast_all":
-        admin_states[user_id] = {"mode": "broadcasting_all"}
-        await query.message.reply_text("✍️ <b>أرسل رسالة الإذاعة (ستصل لجميع المشتركين):</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if data == "broadcast_target":
-        stages = db.get("stages", {})
-        keyboard = [[InlineKeyboardButton(f"🎯 إذاعة لـ {v['name']}", callback_data=f"do_broad_st:{k}")] for k, v in stages.items()]
-        keyboard.append(back_to_panel)
-        try:
-            await query.edit_message_text("اختر المرحلة التي تريد إرسال الإشعار لطلابها فقط:", reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("do_broad_st:"):
-        st_id = data.split(":")[1]
-        st_name = html.escape(db["stages"][st_id]["name"])
-        admin_states[user_id] = {"mode": "broadcasting_st", "st_id": st_id}
-        await query.message.reply_text(f"✍️ <b>أرسل رسالة أو ملف الإذاعة (نص، صورة، ملف، شرح) لطلاب مرحلة {st_name}:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-        
-    if data == "set_group_link":
-        stages = db.get("stages", {})
-        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"grp_st:{k}")] for k, v in stages.items()]
-        keyboard.append(back_to_panel)
-        try:
-            await query.edit_message_text("اختر المرحلة لإضافة رابط جروب لمادتها:", reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest:
-            pass
-        return
-
-    if data == "ban_usr":
-        admin_states[user_id] = {"mode": "ban_user_id"}
-        await query.message.reply_text("✍️ <b>أرسل الآيدي (ID) الخاص بالمستخدم المراد حظره:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if data == "unban_usr":
-        admin_states[user_id] = {"mode": "unban_user_id"}
-        await query.message.reply_text("✍️ <b>أرسل الآيدي (ID) الخاص بالمستخدم المراد فك حظره:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-        
-    if data.startswith("grp_st:"):
-        st_id = data.split(":")[1]
-        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
-        keyboard = [[InlineKeyboardButton(f"📖 {v['name']}", callback_data=f"grp_sb:{st_id}:{k}")] for k, v in subjects.items()]
-        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="set_group_link")])
-        try:
-            await query.edit_message_text("اختر المادة:", reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest:
-            pass
-        return
-        
-    if data.startswith("grp_sb:"):
-        _, st_id, sb_id = data.split(":")
-        admin_states[user_id] = {"mode": "setting_grp_link", "st_id": st_id, "sb_id": sb_id}
-        await query.message.reply_text("✍️ <b>أرسل رابط جروب التليجرام الخاص بهذه المادة:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if data == "add_subadmin":
-        admin_states[user_id] = {"mode": "add_subadmin_id"}
-        await query.message.reply_text("✍️ <b>أرسل الآيدي (ID) الخاص بالمشرف الجديد:</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
-        return
-
-    if data.startswith("subadm_st:"):
-        parts = data.split(":")
-        target_id, st_id = parts[1], parts[2]
-        subjects = db.get("stages", {}).get(st_id, {}).get("subjects", {})
-        keyboard = [[InlineKeyboardButton(f"📖 {v['name']}", callback_data=f"subadm_sb:{target_id}:{st_id}:{k}")] for k, v in subjects.items()]
-        keyboard.append([InlineKeyboardButton("🗑 إغلاق", callback_data="close")])
-        try:
-            await query.edit_message_text("اختر المرحلة التي يُسمح له بالرفع فيها:", reply_markup=InlineKeyboardMarkup(keyboard))
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("subadm_sb:"):
-        _, target_id, st_id, sb_id = data.split(":")
-        if target_id not in db["sub_admins"]: db["sub_admins"][target_id] = []
-        db["sub_admins"][target_id].append({"st_id": st_id, "sb_id": sb_id})
-        save_data(db)
-        try:
-            await query.edit_message_text(f"✅ تم إضافة الصلاحية بنجاح للمشرف (ID: {target_id}).", reply_markup=InlineKeyboardMarkup([back_to_panel]))
-        except BadRequest:
-            pass
-        return
-
-    if data.startswith("reply_to:"):
-        target_id = int(data.split(":")[1])
-        admin_states[user_id] = {"mode": "replying_support", "target_id": target_id}
-        await query.message.reply_text(f"✍️ <b>اكتب ردك للطالب (ID: {target_id}):</b>", reply_markup=InlineKeyboardMarkup([cancel_btn]), parse_mode="HTML")
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]), parse_mode="HTML")
         return
 
 # =========================
@@ -1002,156 +847,56 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state = admin_states[user_id]
         mode = state.get("mode")
 
-        if mode == "student_contrib_upload":
-            st_id = state.get("st_id")
-            del admin_states[user_id]
-
-            contrib_item = {"uploader_name": user.full_name, "uploader_id": user_id}
+        if mode == "setting_schedule" and is_full_admin(user_id):
+            sched_item = {}
             if update.message.document:
-                contrib_item.update({"type": "pdf", "value": update.message.document.file_id, "caption": update.message.caption or ""})
+                sched_item = {"type": "pdf", "value": update.message.document.file_id, "caption": update.message.caption or "📅 جدول الامتحانات والدروس"}
             elif update.message.photo:
-                contrib_item.update({"type": "image", "value": update.message.photo[-1].file_id, "caption": update.message.caption or ""})
+                sched_item = {"type": "photo", "value": update.message.photo[-1].file_id, "caption": update.message.caption or "📅 جدول الامتحانات والدروس"}
             elif update.message.text:
-                contrib_item.update({"type": "text", "value": update.message.text.strip(), "caption": ""})
+                sched_item = {"type": "text", "value": update.message.text.strip()}
             else:
-                await update.message.reply_text("⚠️ نوع الملف غير مدعوم.")
+                await update.message.reply_text("⚠️ يرجى إرسال نص، صورة، أو ملف PDF فقط.")
                 return
 
-            st_name = db.get("stages", {}).get(st_id, {}).get("name", "المرحلة")
-            
-            for adm in db.get("admins", []):
-                try:
-                    kb = InlineKeyboardMarkup([
-                        [
-                            InlineKeyboardButton("✅ موافقة ونشر", callback_data=f"approve_contrib:{st_id}:{user_id}"),
-                            InlineKeyboardButton("❌ رفض", callback_data=f"reject_contrib:{st_id}:{user_id}")
-                        ]
-                    ])
-                    db.setdefault("pending_contribs", {})[str(user_id)] = {"st_id": st_id, "item": contrib_item}
-                    save_data(db)
-
-                    await context.bot.send_message(
-                        chat_id=adm,
-                        text=f"💡 <b>طلب ملخص جديد من طالب:</b>\n👤 الطالب: {html.escape(user.full_name)}\n📚 المرحلة: {html.escape(st_name)}\n\nيرجى المعاينة:",
-                        reply_markup=kb,
-                        parse_mode="HTML"
-                    )
-                    if contrib_item["type"] == "pdf":
-                        await context.bot.send_document(chat_id=adm, document=contrib_item["value"], caption=contrib_item.get("caption",""))
-                    elif contrib_item["type"] == "image":
-                        await context.bot.send_photo(chat_id=adm, photo=contrib_item["value"], caption=contrib_item.get("caption",""))
-                    elif contrib_item["type"] == "text":
-                        await context.bot.send_message(chat_id=adm, text=contrib_item["value"])
-                except Exception as e:
-                    logger.error(f"Failed sending contrib to admin {adm}: {e}")
-
-            await update.message.reply_text("✅ <b>تم إرسال ملخصك بنجاح إلى الإدارة للمراجعة، وسيتم نشره فور الموافقة عليه!</b>", parse_mode="HTML")
-            return
-
-        if mode == "setting_schedule" and is_full_admin(user_id):
-            sched_text = update.message.text.strip() if update.message.text else ""
-            db["schedule_info"] = sched_text
+            db["schedule_info"] = sched_item
             save_data(db)
             del admin_states[user_id]
-            await update.message.reply_text("✅ تم تحديث جدول الامتحانات والدروس بنجاح!")
+            await update.message.reply_text("✅ <b>تم تحديث جدول الامتحانات والدروس بنجاح!</b>", parse_mode="HTML")
             return
 
-        if mode == "searching":
-            del admin_states[user_id]
-            q = update.message.text.strip().lower() if update.message.text else ""
-            results = []
-            for st_id, st_val in db.get("stages", {}).items():
-                for sb_id, sb_val in st_val.get("subjects", {}).items():
-                    if q in sb_val["name"].lower() or q in st_val["name"].lower():
-                        results.append((st_val["name"], sb_val["name"], st_id, sb_id))
-
-            if not results:
-                await update.message.reply_text("❌ لم يتم العثور على نتائج.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑 مسح", callback_data="close")]]))
+        if mode == "add_faq_title" and is_full_admin(user_id):
+            title = update.message.text.strip() if update.message.text else ""
+            if not title:
+                await update.message.reply_text("❌ يرجى إدخال عنوان نصي صريح للسؤال.")
                 return
-
-            keyboard = [[InlineKeyboardButton(f"📚 {r[0]} - 📖 {r[1]}", callback_data=f"u_sb:{r[2]}:{r[3]}")] for r in results]
-            keyboard.append([InlineKeyboardButton("🗑 مسح", callback_data="close")])
-            await update.message.reply_text("🔍 <b>نتائج البحث:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-            return
-
-        if mode == "user_support":
-            del admin_states[user_id]
-            msg = update.message.text or "محتوى غير نصي"
-            safe_name = html.escape(user.full_name)
-            safe_msg = html.escape(msg)
-            kb = [[InlineKeyboardButton("💬 رد على هذا الطالب", callback_data=f"reply_to:{user_id}")]]
             
-            for adm in db.get("admins", []):
-                try:
-                    await context.bot.send_message(
-                        chat_id=adm,
-                        text=f"📩 <b>رسالة جديدة من طالب:</b>\n👤 <b>الاسم:</b> {safe_name}\n🆔 <b>الآيدي:</b> <code>{user_id}</code>\n\n💬 <b>الرسالة:</b>\n{safe_msg}",
-                        reply_markup=InlineKeyboardMarkup(kb),
-                        parse_mode="HTML"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to deliver support msg to admin {adm}: {e}")
-            await update.message.reply_text("✅ تم إرسال رسالتك للإدارة بنجاح.")
+            admin_states[user_id] = {"mode": "add_faq_content", "faq_title": title}
+            cancel_kb = [[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]
+            await update.message.reply_text(f"✍️ <b>الآن أرسل إجابة سؤال ({html.escape(title)}):</b>\n(يمكنك إرسال نص، صورة، أو ملف PDF):", reply_markup=InlineKeyboardMarkup(cancel_kb), parse_mode="HTML")
             return
 
-        if mode == "replying_support" and is_full_admin(user_id):
-            target_id = state.get("target_id")
-            del admin_states[user_id]
-            reply_text = html.escape(update.message.text or "")
-            try:
-                await context.bot.send_message(
-                    chat_id=target_id,
-                    text=f"💬 <b>رد من إدارة البوت:</b>\n\n{reply_text}",
-                    parse_mode="HTML"
-                )
-                await update.message.reply_text("✅ تم إرسال الرد للطالب.")
-            except Exception as e:
-                await update.message.reply_text(f"❌ فشل الإرسال: {e}")
-            return
-
-        if mode == "ask_tag" and is_any_admin(user_id):
-            tag_text = update.message.text.strip() if update.message.text else "تخطي"
-            if tag_text.lower() == "تخطي":
-                state["tag"] = ""
-            else:
-                state["tag"] = tag_text
-                
-            state["mode"] = "uploading"
-            cancel_done = [
-                [InlineKeyboardButton("✅ إنهاء الرفع (/done)", callback_data="cancel_state")]
-            ]
-            await update.message.reply_text("📥 <b>ممتاز! أرسل الملفات الآن، واضغط إنهاء عند اكتمال الرفع.</b>", reply_markup=InlineKeyboardMarkup(cancel_done), parse_mode="HTML")
-            return
-
-        if mode == "uploading" and is_any_admin(user_id):
-            tag = state.get("tag", "")
-
-            item_data = {"tag": tag}
+        if mode == "add_faq_content" and is_full_admin(user_id):
+            faq_title = state.get("faq_title")
+            faq_item = {}
             if update.message.document:
-                item_data.update({"type": "pdf", "value": update.message.document.file_id})
+                faq_item = {"type": "pdf", "value": update.message.document.file_id, "caption": update.message.caption or ""}
             elif update.message.photo:
-                item_data.update({"type": "image", "value": update.message.photo[-1].file_id})
+                faq_item = {"type": "photo", "value": update.message.photo[-1].file_id, "caption": update.message.caption or ""}
             elif update.message.text:
-                item_data.update({"type": "text", "value": update.message.text.strip()})
+                faq_item = {"type": "text", "value": update.message.text.strip()}
             else:
-                await update.message.reply_text("⚠️ نوع الملف غير مدعوم حالياً. يرجى إرسال ملف PDF، صورة، أو نص فقط.")
+                await update.message.reply_text("⚠️ يرجى إرسال نص، صورة، أو ملف PDF كإجابة للسؤال.")
                 return
 
-            state["mode"] = "ask_protect"
-            state["temp_item"] = item_data
-
-            protect_kb = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("🔒 ممنوع التوجيه", callback_data="set_protect:true"),
-                    InlineKeyboardButton("🔓 مسموح التوجيه", callback_data="set_protect:false")
-                ]
-            ])
-            await update.message.reply_text("⚙️ <b>هل تريد السماح بإعادة توجيه وحفظ هذا الملف؟</b>", reply_markup=protect_kb, parse_mode="HTML")
+            db["faq_info"][faq_title] = faq_item
+            save_data(db)
+            del admin_states[user_id]
+            safe_title = html.escape(faq_title)
+            await update.message.reply_text(f"✅ <b>تم حفظ السؤال الشائع ({safe_title}) وإجابته بنجاح!</b>", parse_mode="HTML")
             return
 
-        if not is_full_admin(user_id): return
-        
-        if mode == "add_st":
+        if mode == "add_st" and is_full_admin(user_id):
             name = update.message.text.strip() if update.message.text else "مرحلة جديدة"
             st_id = f"s{int(time.time())}"
             db["stages"][st_id] = {"name": name, "subjects": {}}
@@ -1161,7 +906,7 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"✅ تمت إضافة المرحلة: <b>{safe_st_name}</b>", parse_mode="HTML")
             return
 
-        if mode == "add_sb":
+        if mode == "add_sb" and is_full_admin(user_id):
             name = update.message.text.strip() if update.message.text else "مادة جديدة"
             st_id = state.get("st_id")
             sb_id = f"sub{int(time.time())}"
@@ -1179,7 +924,7 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ حدث خطأ، المرحلة غير موجودة.")
             return
 
-        if mode == "setting_grp_link":
+        if mode == "setting_grp_link" and is_full_admin(user_id):
             st_id, sb_id = state.get("st_id"), state.get("sb_id")
             link = update.message.text.strip() if update.message.text else ""
             if st_id in db.get("stages", {}) and sb_id in db["stages"][st_id].get("subjects", {}):
@@ -1191,7 +936,7 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del admin_states[user_id]
             return
 
-        if mode == "ban_user_id":
+        if mode == "ban_user_id" and is_full_admin(user_id):
             target_str = update.message.text.strip() if update.message.text else ""
             if target_str.isdigit():
                 target_id = int(target_str)
@@ -1204,7 +949,7 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ يرجى إدخال ID صالح (أرقام فقط).")
             return
 
-        if mode == "unban_user_id":
+        if mode == "unban_user_id" and is_full_admin(user_id):
             target_str = update.message.text.strip() if update.message.text else ""
             if target_str.isdigit():
                 target_id = int(target_str)
@@ -1216,20 +961,8 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await update.message.reply_text("❌ يرجى إدخال ID صالح (أرقام فقط).")
             return
-            
-        if mode == "add_subadmin_id":
-            target_id = update.message.text.strip() if update.message.text else ""
-            if not target_id.isdigit():
-                await update.message.reply_text("❌ الآيدي يجب أن يكون أرقاماً فقط.")
-                return
-            stages = db.get("stages", {})
-            keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"subadm_st:{target_id}:{k}")] for k, v in stages.items()]
-            keyboard.append([InlineKeyboardButton("🗑 إلغاء", callback_data="close")])
-            await update.message.reply_text("اختر المرحلة الدراسية للصلاحية:", reply_markup=InlineKeyboardMarkup(keyboard))
-            del admin_states[user_id]
-            return
 
-        if mode == "broadcasting_all":
+        if mode == "broadcasting_all" and is_full_admin(user_id):
             del admin_states[user_id]
             msg = html.escape(update.message.text or "")
             count = 0
@@ -1240,34 +973,6 @@ async def input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception:
                     pass
             await update.message.reply_text(f"✅ تم الإرسال إلى {count} مستخدم.")
-            return
-
-        if mode == "broadcasting_st":
-            st_id = state.get("st_id")
-            
-            msg_data = {}
-            if update.message.document:
-                msg_data = {"type": "document", "value": update.message.document.file_id, "caption": update.message.caption or ""}
-            elif update.message.photo:
-                msg_data = {"type": "photo", "value": update.message.photo[-1].file_id, "caption": update.message.caption or ""}
-            elif update.message.video:
-                msg_data = {"type": "video", "value": update.message.video.file_id, "caption": update.message.caption or ""}
-            elif update.message.text:
-                msg_data = {"type": "text", "value": update.message.text.strip()}
-            else:
-                await update.message.reply_text("⚠️ نوع المحتوى غير مدعوم للاذاعة.")
-                return
-
-            state["mode"] = "broadcasting_st_protect"
-            state["msg_data"] = msg_data
-
-            protect_kb = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("🔒 ممنوع التوجيه", callback_data="broadcast_protect:true"),
-                    InlineKeyboardButton("🔓 مسموح التوجيه", callback_data="broadcast_protect:false")
-                ]
-            ])
-            await update.message.reply_text("⚙️ <b>هل تريد السماح بإعادة توجيه محتوى الإذاعة للمرحلة؟</b>", reply_markup=protect_kb, parse_mode="HTML")
             return
 
 # =========================
@@ -1304,7 +1009,6 @@ def main():
             )
         except Exception as e:
             print(f"⚠️ واجهنا انقطاع مؤقت في الشبكة (Bad Gateway): {e}")
-            print("🔄 إعادة محاولة الاتصال خلال 10 ثوانٍ...")
             import time
             time.sleep(10)
 
