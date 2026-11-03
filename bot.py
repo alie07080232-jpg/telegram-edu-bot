@@ -175,7 +175,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         f"✨ <b>البوت التعليمي الرسمي</b>\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"👑 **المطور والمهندس:** <code>مقتدى عامر</code>\n"
+        f"👑 <b>المطور والمهندس:</b> <code>مقتدى عامر</code>\n"
         f"━━━━━━━━━━━━━━━\n\n"
         f"👋 أهلاً بك يا <b>{safe_name}</b> في بوتك التعليمي.\n"
         f"اختر من القائمة أدناه للبدء:"
@@ -1264,8 +1264,16 @@ def main():
         pool_timeout=60.0
     )
     
-    # بناء التطبيق بالطريقة العادية
-    app = Application.builder().token(TOKEN).request(request).build()
+    # استخدام خادم وسيط (API Base URL Proxy) لكسر حظر شبكة Render والاتصال بتليجرام بسلاسة
+    PROXY_API_URL = "https://tele-proxy.my-net.workers.dev/bot{token}/{method}"
+    
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .request(request)
+        .base_url(PROXY_API_URL)
+        .build()
+    )
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("panel", panel_command))
@@ -1276,30 +1284,16 @@ def main():
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, input_handler))
 
     print("==========================================")
-    print("🚀 تم تشغيل البوت بنجاح تام!")
+    print("🚀 تم تشغيل البوت عبر خادم وسيط كاسر للحظر بنجاح!")
     print("==========================================")
 
-    # تشغيل مباشر مع التقاط أي خطأ شبكي وإعادة المحاولة بذكاء
     while True:
         try:
-            # استخدام التشغيل اليدوي للآبديت لتجنب انهيار التهيئة التلقائية
-            import asyncio
-            async def run_bot():
-                await app.initialize()
-                await app.start()
-                await app.updater.start_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
-                
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # إذا كانت حلقة العمل تعمل مسبقاً
-                pass
-            else:
-                asyncio.run(run_bot())
-                
+            app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
         except Exception as e:
-            print(f"⚠️ خطأ في الاتصال (Bad Gateway / Network): {e}. إعادة المحاولة خلال 10 ثوانٍ...")
+            print(f"⚠️ خطأ في الاتصال: {e}. إعادة المحاولة خلال 5 ثوانٍ...")
             import time
-            time.sleep(10)
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()
