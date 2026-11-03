@@ -171,7 +171,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(ask_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
             return
 
-    # ترتيب القائمة الرئيسية بشكل مرتب ومريح
     keyboard = [
         [InlineKeyboardButton("📚 المراحل والمناهج", callback_data="u_st_main"), InlineKeyboardButton("💡 ملخصات الطلبة", callback_data="student_contrib_main")],
         [InlineKeyboardButton("📅 جدول الامتحانات", callback_data="show_schedule"), InlineKeyboardButton("🤖 الأسئلة الشائعة", callback_data="show_faq")],
@@ -201,7 +200,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def get_admin_panel_keyboard(user_id):
     if is_full_admin(user_id):
-        # لوحة تحكم منظمة ومرتبة بشكل ممتاز
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("➕ إضافة مرحلة", callback_data="add_st"), InlineKeyboardButton("➕ إضافة مادة", callback_data="add_sb")],
             [InlineKeyboardButton("📥 رفع محتوى للمواد", callback_data="up_st"), InlineKeyboardButton("🗑 حذف مراحل/مواد", callback_data="del_menu")],
@@ -326,6 +324,77 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
 
+    if data == "student_contrib_main":
+        stages = db.get("stages", {})
+        keyboard = [
+            [InlineKeyboardButton("📤 رفع ملخص أو شرح جديد", callback_data="student_upload_start")]
+        ]
+        for k, v in stages.items():
+            keyboard.append([InlineKeyboardButton(f"💡 ملخصات {v['name']}", callback_data=f"view_contrib_st:{k}")])
+        keyboard.append([InlineKeyboardButton("⬅️ الرجوع للرئيسية", callback_data="go_home")])
+        keyboard.append([InlineKeyboardButton("🗑 مسح", callback_data="close")])
+        try:
+            await query.edit_message_text("💡 <b>قسم شروحات وملخصات الطلبة المتميزين:</b>\nاختر المرحلة لعرض الملخصات أو اضغط لرفع ملخصك الخاص:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data == "student_upload_start":
+        stages = db.get("stages", {})
+        if not stages:
+            await query.answer("❌ لا توجد مراحل متاحة حالياً.", show_alert=True)
+            return
+        keyboard = [[InlineKeyboardButton(f"📚 {v['name']}", callback_data=f"contrib_sel_st:{k}")] for k, v in stages.items()]
+        keyboard.append([InlineKeyboardButton("⬅️ رجوع", callback_data="student_contrib_main")])
+        try:
+            await query.edit_message_text("📤 <b>اختر المرحلة الدراسية الخاصة بالملخص أو الشرح الذي تريد رفعه:</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("contrib_sel_st:"):
+        st_id = data.split(":")[1]
+        admin_states[user_id] = {"mode": "student_contrib_upload", "st_id": st_id}
+        cancel_kb = [[InlineKeyboardButton("❌ إلغاء", callback_data="cancel_state")]]
+        try:
+            await query.message.reply_text("✍️ <b>أرسل الآن الملخص (ملف PDF، أو صورة، أو شرح نصي) مع ذكر اسمك ورتّب التفاصيل:</b>", reply_markup=InlineKeyboardMarkup(cancel_kb), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
+    if data.startswith("view_contrib_st:"):
+        st_id = data.split(":")[1]
+        contributions = db.get("student_contributions", {}).get(st_id, [])
+        back_kb = [
+            [InlineKeyboardButton("⬅️ رجوع لقائمة الملخصات", callback_data="student_contrib_main")],
+            [InlineKeyboardButton("🗑 مسح", callback_data="close")]
+        ]
+        if not contributions:
+            try:
+                await query.edit_message_text("❌ لا توجد ملخصات معتمدة لهذه المرحلة حالياً.", reply_markup=InlineKeyboardMarkup(back_kb))
+            except BadRequest:
+                pass
+            return
+
+        for item in contributions:
+            itype, val, u_name, caption = item.get("type"), item.get("value"), item.get("uploader_name"), item.get("caption", "")
+            full_cap = f"💡 <b>ملخص طالب متميز:</b> {html.escape(u_name)}\n📝 {html.escape(caption)}"
+            try:
+                if itype == "pdf":
+                    await query.message.reply_document(document=val, caption=full_cap, parse_mode="HTML")
+                elif itype == "image":
+                    await query.message.reply_photo(photo=val, caption=full_cap, parse_mode="HTML")
+                elif itype == "text":
+                    await query.message.reply_text(f"{full_cap}\n\n{html.escape(val)}", parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Error sending contribution: {e}")
+
+        try:
+            await query.message.reply_text("✨ <b>تم عرض جميع ملخصات هذه المرحلة.</b>", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
+        except BadRequest:
+            pass
+        return
+
     if data == "show_schedule":
         sched_data = db.get("schedule_info", {"type": "text", "value": "📅 لا يوجد جدول مضاف حالياً."})
         back_kb = [[InlineKeyboardButton("⬅️ الرجوع للرئيسية", callback_data="go_home")], [InlineKeyboardButton("🗑 مسح", callback_data="close")]]
@@ -381,6 +450,44 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.edit_message_text(f"💡 <b>{faq_key}:</b>\n\n{val}", reply_markup=InlineKeyboardMarkup(back_kb), parse_mode="HTML")
         except Exception as e:
             logger.error(f"Error fetching FAQ: {e}")
+        return
+
+    # معالجة الموافقة والرفض لملخصات الطلبة
+    if data.startswith("approve_contrib:") or data.startswith("reject_contrib:"):
+        parts = data.split(":")
+        action, st_id, u_id_str = parts[0], parts[1], parts[2]
+        pending = db.get("pending_contribs", {}).get(u_id_str)
+        
+        if pending:
+            p_item = pending["item"]
+            if action == "approve_contrib":
+                if st_id not in db["student_contributions"]:
+                    db["student_contributions"][st_id] = []
+                db["student_contributions"][st_id].append(p_item)
+                save_data(db)
+                try:
+                    await context.bot.send_message(chat_id=int(u_id_str), text="🎉 <b>مبارك! تمت الموافقة على ملخصك ونشره في قسم شروحات وملخصات الطلبة.</b>", parse_mode="HTML")
+                except Exception:
+                    pass
+                await query.answer("✅ تمت الموافقة ونشر الملخص بنجاح!", show_alert=True)
+            else:
+                try:
+                    await context.bot.send_message(chat_id=int(u_id_str), text="❌ نعتذر، تم رفض الملخص المرسل من قبل الإدارة.", parse_mode="HTML")
+                except Exception:
+                    pass
+                await query.answer("❌ تم رفض الملخص.", show_alert=True)
+            
+            if u_id_str in db["pending_contribs"]:
+                del db["pending_contribs"][u_id_str]
+                save_data(db)
+
+            try:
+                action_text = "✅ تم قبول ونشر الملخص" if action == "approve_contrib" else "❌ تم رفض الملخص"
+                await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(action_text, callback_data="close")]]))
+            except BadRequest:
+                pass
+        else:
+            await query.answer("⚠️ هذا الطلب غير موجود أو تم التعامل معه مسبقاً.", show_alert=True)
         return
 
     if not is_any_admin(user_id):
