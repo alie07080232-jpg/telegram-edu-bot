@@ -1257,8 +1257,13 @@ async def handle_contrib_approval(update: Update, context: ContextTypes.DEFAULT_
 # 6. التشغيل الرئيسي
 # =========================
 def main():
-    # تعديل مهلة الاتصال لتجنب مشاكل الـ ReadTimeout في الاستضافات الضعيفة
-    request = HTTPXRequest(read_timeout=30.0, connect_timeout=30.0)
+    # زيادة مهلة الاتصال وقراءتها لتجنب انقطاع الشبكة وخطأ Bad Gateway
+    request = HTTPXRequest(
+        connect_timeout=60.0,
+        read_timeout=60.0,
+        write_timeout=60.0,
+        pool_timeout=60.0
+    )
     app = Application.builder().token(TOKEN).request(request).build()
     
     app.add_handler(CommandHandler("start", start_command))
@@ -1273,7 +1278,6 @@ def main():
     print("==========================================")
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+    
+    # التشغيل مع السماح بتجاوز أخطاء الشبكة المؤقتة
+    app.run_polling(drop_pending_updates=True)
