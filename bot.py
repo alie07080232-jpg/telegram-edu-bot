@@ -1264,7 +1264,7 @@ def main():
         pool_timeout=60.0
     )
     
-    # البناء بالطريقة القياسية الصحيحة والمستقرة
+    # بناء التطبيق بالطريقة العادية
     app = Application.builder().token(TOKEN).request(request).build()
     
     app.add_handler(CommandHandler("start", start_command))
@@ -1278,15 +1278,28 @@ def main():
     print("==========================================")
     print("🚀 تم تشغيل البوت بنجاح تام!")
     print("==========================================")
-    
-    # حماية عملية التشغيل لمنع أي انهيار مفاجئ بسبب الشبكة
+
+    # تشغيل مباشر مع التقاط أي خطأ شبكي وإعادة المحاولة بذكاء
     while True:
         try:
-            app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+            # استخدام التشغيل اليدوي للآبديت لتجنب انهيار التهيئة التلقائية
+            import asyncio
+            async def run_bot():
+                await app.initialize()
+                await app.start()
+                await app.updater.start_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+                
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # إذا كانت حلقة العمل تعمل مسبقاً
+                pass
+            else:
+                asyncio.run(run_bot())
+                
         except Exception as e:
-            print(f"Network error encountered: {e}. Retrying in 5 seconds...")
+            print(f"⚠️ خطأ في الاتصال (Bad Gateway / Network): {e}. إعادة المحاولة خلال 10 ثوانٍ...")
             import time
-            time.sleep(5)
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()
