@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-TOKEN = "8923167631:AAHFCPabfEzn_ld7tRRXne_R4IOq8zy2kFU"
+TOKEN = "8923167631:AAEL_Kj0CajjWR744VpwvJ9AC8hdQStSExg"
 OWNER_ID = 1400528157
 YOUTUBE_URL = "https://youtube.com/@moqtdaamer?si=qTDuPNCBSckl2qmu"
 
